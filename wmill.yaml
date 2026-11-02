@@ -1,0 +1,13 @@
+defaultTs: bun
+includes:
+  - f/**
+excludes:
+  # Created by the server in a fresh workspace; kept out of the diff so the
+  # first push only touches the two scripts below.
+  - f/app_*/**
+skipResourceTypes: true
+codebases:
+  # Every script under f/codebase is bundled with esbuild by the CLI.
+  - relative_path: f/codebase
+    includes:
+      - f/codebase/**

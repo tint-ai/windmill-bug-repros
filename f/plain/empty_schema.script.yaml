@@ -1,0 +1,5 @@
+summary: Plain script whose metadata holds an empty schema
+description: ''
+lock: '!inline f/plain/empty_schema.script.lock'
+kind: script
+schema: {}

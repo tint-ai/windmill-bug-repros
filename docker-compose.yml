@@ -1,0 +1,89 @@
+# Windmill EE 1.847.0 + the wmill CLI, all in Docker.
+# Requires WM_LICENSE_KEY in the environment (codebases are an EE feature).
+x-windmill: &windmill
+  image: ghcr.io/windmill-labs/windmill-ee:1.847.0
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-env: &env
+  DATABASE_URL: postgres://postgres:postgres@db:5432/windmill?sslmode=disable
+  BASE_URL: http://localhost:${WM_PORT:-48100}
+  LICENSE_KEY: ${WM_LICENSE_KEY:?WM_LICENSE_KEY is required}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: windmill
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  # Object store for codebase bundles (script_bundle/<ws>/<hash>.esm).
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 10
+
+  server:
+    <<: *windmill
+    ports:
+      - "${WM_PORT:-48100}:8000"
+    environment:
+      <<: *env
+      MODE: server
+      SUPERADMIN_SECRET: superadmin-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/version"]
+      interval: 5s
+      retries: 30
+
+  worker:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: default
+
+  worker-dependency:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: dependency
+      WORKER_TAGS: dependency
+
+  # One-shot CLI container: `docker compose run --rm cli <wmill args>`.
+  cli:
+    image: oven/bun:1.2-alpine
+    profiles: [cli]
+    working_dir: /repo
+    # Run as the host user so files written by the CLI stay editable.
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/repo
+    entrypoint: ["bunx", "windmill-cli@1.847.0"]
+    environment:
+      BASE_INTERNAL_URL: http://server:8000
+      HOME: /tmp
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  minio_data:
