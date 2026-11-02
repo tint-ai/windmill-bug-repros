@@ -27,36 +27,16 @@ Everything runs in Docker: Postgres, MinIO (object store for bundles), Windmill 
 WM_LICENSE_KEY=<ee-license> ./repro.sh
 ```
 
-The script uses the `admins` workspace and the superadmin token. Each step runs `wmill sync push`, then prints the deployed hash of each script and the number of objects under `script_bundle/` in MinIO.
+The script uses the `admins` workspace and the superadmin token. Each step edits one file, runs `wmill sync push`, and compares the scripts whose deployed hash changed with the scripts expected to change.
 
-Each redeploy uploads a new bundle and keeps the previous one, so the object count shows the upload and storage cost. At our scale, every push adds 6 GiB.
-
-| Step | Edit | Changes to apply | Scripts redeployed | Bundles stored (cumulative) |
+| Step | Edit | Expected redeploys | Actual redeploys | Bundles stored |
 |---|---|---|---|---|
-| 1 | first push | 12 | a, b, c | 3 |
-| 2 | none | 0 | none | 3 |
-| 3 | comment in `f/app/a.spec.ts` | 3 | a, b, c | 6 |
-| 4 | `f/app/lib/greet.ts` | 3 | a, b, c | 9 |
+| 1 | first push | a, b, c | a, b, c | 3 |
+| 2 | none | none | none | 3 |
+| 3 | comment in `f/app/a.spec.ts` | none: no script bundles it | a, b, c | 6 |
+| 4 | `f/app/lib/greet.ts` | a: only script bundling it | a, b, c | 9 |
 
-Output of step 3:
-
-```
-== 3. Edit a comment in f/app/a.spec.ts (excluded from sync, imported by nothing)
-Codebase f/app, digest: 9125a50a2c7fcdc0ed58c804fe997a1e27ce797d12fa588fc24824d5d68e5aa8.esm
-remote (admins) <- local: 3 changes to apply
-Updated script f/app/a (11ms)
-Updated script f/app/b (12ms)
-Updated script f/app/c (26ms)
-  f/app/a  de0e46df9c088a83
-  f/app/b  8b394f37ab276c62
-  f/app/c  b214725ab3a90ff7
-  bundles in object store: 6
-```
-
-## Expected
-
-- Step 3 redeploys nothing: no script bundles `a.spec.ts`.
-- Step 4 redeploys `f/app/a` only: it is the only script that bundles `greet.ts`.
+"Bundles stored" counts objects under `script_bundle/` in MinIO. Each redeploy uploads a new bundle and keeps the old one, so it shows the upload and storage cost. At our scale, every push adds 6 GiB.
 
 ## Cause
 
@@ -64,7 +44,7 @@ Updated script f/app/c (26ms)
 
 ## Suggestion
 
-The CLI already runs esbuild per entry with `metafile: true` and reads `out.metafile.inputs` in `uncoveredBundleInputs`. Hashing the content of those inputs (plus the codebase config) gives a per-script digest with no extra build step. A script then re-pushes only when a file it bundles changes.
+The CLI already runs esbuild per entry with `metafile: true` and reads `out.metafile.inputs` in `uncoveredBundleInputs`. Hashing the content of those inputs (plus the codebase config) gives a per-script digest, so a script re-pushes only when a file it bundles changes. The trade-off: the esbuild pass moves before change detection, so `sync push` bundles every script locally even when nothing changed.
 
 ## Impact
 

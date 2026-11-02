@@ -7,21 +7,30 @@ cd "$(dirname "$0")"
 WS=admins
 API="http://localhost:${WM_PORT:-48000}/api"
 AUTH=(-H "Authorization: Bearer superadmin-secret" -H "Content-Type: application/json")
+SCRIPTS=(a b c)
 
 wmill() {
   docker compose run --rm -T cli \
     --base-url http://server:8000 --token superadmin-secret --workspace "$WS" "$@"
 }
-push() {
-  wmill sync push --yes 2>&1 | sed "s/\x1b\[[0-9;]*m//g" | grep -E "changes to apply|Codebase f/app, digest|(Updated|Created new) script" || true
-}
-hashes() {
-  for s in a b c; do
-    printf '  f/app/%s  %s\n' "$s" "$(curl -sS "${AUTH[@]}" "$API/w/$WS/scripts/get/p/f/app/$s" | sed -E 's/.*"hash":"([^"]+)".*/\1/')"
-  done
+hash_of() {
+  curl -sS "${AUTH[@]}" "$API/w/$WS/scripts/get/p/f/app/$1" | sed -E 's/.*"hash":"([^"]+)".*/\1/'
 }
 bundles() {
   docker compose exec -T minio sh -c 'mc ls --recursive m/windmill/script_bundle/ 2>/dev/null | wc -l'
+}
+# push <expected redeploys>: pushes, then compares redeployed scripts with the expected ones.
+push() {
+  local expected=$1 before=() actual="" s i=0
+  for s in "${SCRIPTS[@]}"; do before+=("$(hash_of "$s" 2>/dev/null || true)"); done
+  wmill sync push --yes 2>&1 | sed "s/\x1b\[[0-9;]*m//g" | grep -E "changes to apply" || true
+  for s in "${SCRIPTS[@]}"; do
+    [ "$(hash_of "$s")" != "${before[$i]}" ] && actual+="f/app/$s "
+    i=$((i + 1))
+  done
+  echo "  expected redeploys: ${expected:-none}"
+  echo "  actual redeploys:   ${actual:-none}"
+  echo "  bundles stored:     $(bundles)"
 }
 
 docker compose up -d --wait
@@ -34,19 +43,16 @@ sleep 15  # let the server reload the setting
 restore() { git checkout -- f/app/a.spec.ts f/app/lib/greet.ts 2>/dev/null || true; }
 trap restore EXIT
 
-echo "== 1. First push: 3 codebase scripts created"
-push
-hashes; echo "  bundles in object store: $(bundles)"
+echo "== 1. First push"
+push "f/app/a f/app/b f/app/c "
 
 echo "== 2. Push again, nothing changed (control)"
-push
+push ""
 
 echo "== 3. Edit a comment in f/app/a.spec.ts (excluded from sync, imported by nothing)"
 sed -i 's|^// Test file.*|// Test file (edited comment).|' f/app/a.spec.ts
-push
-hashes; echo "  bundles in object store: $(bundles)"
+push ""
 
 echo "== 4. Edit f/app/lib/greet.ts (bundled into f/app/a only)"
 sed -i 's|hello |hi |' f/app/lib/greet.ts
-push
-hashes; echo "  bundles in object store: $(bundles)"
+push "f/app/a "
