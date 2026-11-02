@@ -7,12 +7,16 @@ Tested on Windmill server and CLI 1.847.0 (EE), Bun scripts.
 ## Layout
 
 ```
-wmill.yaml           # codebase: relative_path f/app, format esm
-f/app/a.ts           # codebase script, imports ./lib/greet.ts
-f/app/b.ts           # codebase script, no imports
-f/app/c.ts           # codebase script, no imports
-f/app/lib/greet.ts   # helper bundled into a.ts only (excluded from sync)
-f/app/a.spec.ts      # test file, imported by nothing (excluded from sync)
+.
+|__ wmill.yaml            # codebase: relative_path f/app, format esm
+|__ f/
+    |__ app/
+        |__ a.ts          # codebase script, imports ./lib/greet.ts
+        |__ a.spec.ts     # test file, imported by nothing (excluded from sync)
+        |__ b.ts          # codebase script, no imports
+        |__ c.ts          # codebase script, no imports
+        |__ lib/
+            |__ greet.ts  # helper bundled into a.ts only (excluded from sync)
 ```
 
 ## Steps
@@ -25,7 +29,9 @@ WM_LICENSE_KEY=<ee-license> ./repro.sh
 
 The script uses the `admins` workspace and the superadmin token. Each step runs `wmill sync push`, then prints the deployed hash of each script and the number of objects under `script_bundle/` in MinIO.
 
-| Step | Edit | Changes to apply | Scripts redeployed | Bundles in store |
+Each redeploy uploads a new bundle and keeps the previous one, so the object count shows the upload and storage cost. At our scale, every push adds 6 GiB.
+
+| Step | Edit | Changes to apply | Scripts redeployed | Bundles stored (cumulative) |
 |---|---|---|---|---|
 | 1 | first push | 12 | a, b, c | 3 |
 | 2 | none | 0 | none | 3 |
