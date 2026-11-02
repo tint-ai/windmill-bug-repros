@@ -13,7 +13,7 @@ wmill() {
     --base-url http://server:8000 --token superadmin-secret --workspace "$WS" "$@"
 }
 push() {
-  wmill sync push --yes 2>&1 | grep -E "changes to apply|Codebase f/app, digest|(Updated|Created new) script" || true
+  wmill sync push --yes 2>&1 | sed "s/\x1b\[[0-9;]*m//g" | grep -E "changes to apply|Codebase f/app, digest|(Updated|Created new) script" || true
 }
 hashes() {
   for s in a b c; do
