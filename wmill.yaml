@@ -1,0 +1,10 @@
+defaultTs: bun
+includes:
+  - f/**
+codebases:
+  # Bundle every script under f/app with esbuild. Libs under f/shared/lib are
+  # NOT part of the codebase: they stay plain workspace scripts.
+  - relative_path: f
+    format: esm
+    includes:
+      - app/**

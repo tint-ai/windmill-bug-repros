@@ -1,0 +1,12 @@
+summary: Codebase script importing f/shared/lib/format
+description: ''
+lock: ''
+kind: script
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    name:
+      type: string
+      default: world
+  required: []

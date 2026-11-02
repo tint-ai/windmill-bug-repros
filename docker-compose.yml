@@ -1,0 +1,71 @@
+# Windmill EE 1.847.0 + the wmill CLI, all in Docker.
+# Requires LICENSE_KEY in the environment (codebases are an EE feature).
+x-windmill: &windmill
+  image: ghcr.io/windmill-labs/windmill-ee:1.847.0
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-env: &env
+  DATABASE_URL: postgres://postgres:postgres@db:5432/windmill?sslmode=disable
+  BASE_URL: http://localhost:18000
+  LICENSE_KEY: ${LICENSE_KEY:?LICENSE_KEY is required}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: windmill
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  server:
+    <<: *windmill
+    ports:
+      - "18000:8000"
+    environment:
+      <<: *env
+      MODE: server
+      SUPERADMIN_SECRET: superadmin-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/version"]
+      interval: 5s
+      retries: 30
+
+  worker:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: default
+
+  worker-dependency:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: dependency
+      WORKER_TAGS: dependency
+
+  # One-shot CLI container: `docker compose run --rm cli <wmill args>`.
+  cli:
+    image: oven/bun:1.2-alpine
+    profiles: [cli]
+    working_dir: /repo
+    volumes:
+      - .:/repo
+    entrypoint: ["bunx", "windmill-cli@1.847.0"]
+    environment:
+      BASE_INTERNAL_URL: http://server:8000
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  db_data:
