@@ -1,0 +1,11 @@
+defaultTs: bun
+includes:
+  - f/**
+excludes:
+  - "**/*.spec.ts"   # tests: never deployed
+  - f/app/lib/**     # helpers: bundled into scripts, not deployed on their own
+codebases:
+  - relative_path: f/app
+    format: esm
+    includes:
+      - f/app/**

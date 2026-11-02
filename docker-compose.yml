@@ -1,0 +1,58 @@
+# Windmill EE 1.847.0 + MinIO + the wmill CLI, all in Docker.
+# Requires WM_LICENSE_KEY in the environment (codebases are an EE feature).
+# No worker: the repro only deploys, it never runs a script.
+x-env: &env
+  DATABASE_URL: postgres://postgres:postgres@db:5432/windmill?sslmode=disable
+  BASE_URL: http://localhost:${WM_PORT:-48000}
+  LICENSE_KEY: ${WM_LICENSE_KEY:?WM_LICENSE_KEY is required}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: windmill
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  # Object store for codebase bundles (script_bundle/<ws>/<hash>.esm).
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 10
+
+  server:
+    image: ghcr.io/windmill-labs/windmill-ee:1.847.0
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${WM_PORT:-48000}:8000"
+    environment:
+      <<: *env
+      MODE: server
+      SUPERADMIN_SECRET: superadmin-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/version"]
+      interval: 5s
+      retries: 30
+
+  # One-shot CLI container: `docker compose run --rm cli <wmill args>`.
+  cli:
+    image: oven/bun:1.2-alpine
+    profiles: [cli]
+    working_dir: /repo
+    volumes:
+      - .:/repo
+    entrypoint: ["bunx", "windmill-cli@1.847.0"]
+    depends_on:
+      server:
+        condition: service_healthy
