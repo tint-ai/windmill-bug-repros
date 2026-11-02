@@ -1,5 +1,5 @@
 # Windmill EE 1.847.0 + the wmill CLI, all in Docker.
-# Requires LICENSE_KEY in the environment (codebases are an EE feature).
+# Requires WM_LICENSE_KEY in the environment (codebases are an EE feature).
 x-windmill: &windmill
   image: ghcr.io/windmill-labs/windmill-ee:1.847.0
   restart: unless-stopped
@@ -9,8 +9,8 @@ x-windmill: &windmill
 
 x-env: &env
   DATABASE_URL: postgres://postgres:postgres@db:5432/windmill?sslmode=disable
-  BASE_URL: http://localhost:18000
-  LICENSE_KEY: ${LICENSE_KEY:?LICENSE_KEY is required}
+  BASE_URL: http://localhost:${WM_PORT:-48000}
+  LICENSE_KEY: ${WM_LICENSE_KEY:?WM_LICENSE_KEY is required}
 
 services:
   db:
@@ -25,10 +25,24 @@ services:
       interval: 5s
       retries: 10
 
+  # Object store for codebase bundles (script_bundle/<ws>/<hash>.esm).
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 10
+
   server:
     <<: *windmill
     ports:
-      - "18000:8000"
+      - "${WM_PORT:-48000}:8000"
     environment:
       <<: *env
       MODE: server
@@ -69,3 +83,4 @@ services:
 
 volumes:
   db_data:
+  minio_data:

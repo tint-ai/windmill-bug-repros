@@ -7,4 +7,4 @@ codebases:
   - relative_path: f
     format: esm
     includes:
-      - app/**
+      - f/app/**
