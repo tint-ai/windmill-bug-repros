@@ -2,7 +2,7 @@
 
 When a lib's lockfile changes, the server relocks the scripts that import it. For a script deployed as a codebase bundle, that relock deploys a new version whose bundle doesn't exist, and the script can no longer run.
 
-Tested on Windmill server and CLI 1.847.0 (EE), Bun scripts.
+Reproduced with Bun scripts on Windmill EE server and CLI 1.847.0, and on the latest release: server 1.862.0 with CLI 1.862.1 (2026-11-06). The compose file pins 1.847.0; both versions fail the same way.
 
 ## Layout
 
@@ -43,4 +43,11 @@ Failed to pull bytes from object store: script_bundle/admins/a79c60912e469e23.es
 
 ## Expected
 
-A codebase script already has its dependencies inside its bundle. The relock on lib change should either skip it, or carry the bundle over to the new version.
+The Windmill server runs the relock on its own: when a lib's lock changes, it reads `dependency_map` and queues a `dependencies` job for every script that imports the lib. That job doesn't check whether the script is a codebase bundle.
+
+Refreshing the importing script is expected, since its bundle inlines the lib's code. The bug is how the server refreshes it: the server can't re-bundle, so the job deploys a version with a new lock and no bundle.
+
+A codebase script carries its dependencies inside its bundle and gets re-bundled by the CLI on push, so it needs no server-side relock. The relock should either:
+
+- skip codebase scripts and leave the refresh to the next CLI push, or
+- carry the previous bundle over to the new version, so the script stays runnable until that push.
