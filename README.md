@@ -2,7 +2,7 @@
 
 Minimal repro for: the codebase digest covers the whole `relative_path` tree, so editing any file under it re-bundles and re-uploads every script of the codebase, including scripts that don't import the edited file.
 
-Tested on Windmill server and CLI 1.847.0 (EE), Bun scripts.
+Reproduced with Bun scripts on Windmill EE server and CLI 1.847.0, and on the latest release: server 1.862.0 with CLI 1.862.1 (2026-11-06). The compose file pins 1.847.0; both versions give the same results below.
 
 ## Layout
 
