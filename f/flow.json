@@ -1,0 +1,60 @@
+{
+  "summary": "two script steps by path, one inline step",
+  "value": {
+    "modules": [
+      {
+        "id": "a",
+        "value": {
+          "type": "script",
+          "path": "f/r/echo",
+          "input_transforms": {
+            "x": {
+              "type": "javascript",
+              "expr": "flow_input.x"
+            }
+          }
+        }
+      },
+      {
+        "id": "b",
+        "value": {
+          "type": "script",
+          "path": "f/r/echo",
+          "input_transforms": {
+            "x": {
+              "type": "javascript",
+              "expr": "results.a"
+            }
+          }
+        }
+      },
+      {
+        "id": "c",
+        "value": {
+          "type": "rawscript",
+          "language": "bun",
+          "content": "// Top-level delay: stands in for module load time (large imports). A warm\n// runner pays it once at startup; a fresh `bun run` pays it on every job.\nawait new Promise((r) => setTimeout(r, 500));\n\nexport async function main(x: number) {\n  return x + 1;\n}\n",
+          "input_transforms": {
+            "x": {
+              "type": "javascript",
+              "expr": "results.b"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "x": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "x"
+    ]
+  },
+  "dedicated_worker": true
+}
