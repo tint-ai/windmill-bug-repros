@@ -53,21 +53,21 @@ Every step job is pulled by the dedicated worker. Steps `a` and `b` still spawn 
 
 ```
 run  step  runnable_path  worker     duration_ms  dispatch
-1    a     f/r/echo       dedicated  535          bun run (took 512ms)
-1    b     f/r/echo       dedicated  521          bun run (took 515ms)
-1    c     f/r/flow/c     dedicated  15           runner (f/r/flow/c)
-2    a     f/r/echo       dedicated  532          bun run (took 514ms)
-2    b     f/r/echo       dedicated  522          bun run (took 516ms)
-2    c     f/r/flow/c     dedicated  5            runner (f/r/flow/c)
-3    a     f/r/echo       dedicated  516          bun run (took 512ms)
-3    b     f/r/echo       dedicated  520          bun run (took 514ms)
+1    a     f/r/echo       dedicated  530          bun run (took 508ms)
+1    b     f/r/echo       dedicated  529          bun run (took 510ms)
+1    c     f/r/flow/c     dedicated  23           runner (f/r/flow/c)
+2    a     f/r/echo       dedicated  530          bun run (took 511ms)
+2    b     f/r/echo       dedicated  535          bun run (took 514ms)
+2    c     f/r/flow/c     dedicated  24           runner (f/r/flow/c)
+3    a     f/r/echo       dedicated  525          bun run (took 508ms)
+3    b     f/r/echo       dedicated  520          bun run (took 515ms)
 3    c     f/r/flow/c     dedicated  4            runner (f/r/flow/c)
-4    a     f/r/echo       dedicated  517          bun run (took 513ms)
-4    b     f/r/echo       dedicated  520          bun run (took 515ms)
-4    c     f/r/flow/c     dedicated  5            runner (f/r/flow/c)
-5    a     f/r/echo       dedicated  513          bun run (took 510ms)
-5    b     f/r/echo       dedicated  517          bun run (took 513ms)
-5    c     f/r/flow/c     dedicated  18           runner (f/r/flow/c)
+4    a     f/r/echo       dedicated  528          bun run (took 509ms)
+4    b     f/r/echo       dedicated  537          bun run (took 516ms)
+4    c     f/r/flow/c     dedicated  17           runner (f/r/flow/c)
+5    a     f/r/echo       dedicated  529          bun run (took 511ms)
+5    b     f/r/echo       dedicated  533          bun run (took 513ms)
+5    c     f/r/flow/c     dedicated  20           runner (f/r/flow/c)
 
 Dispatch lines in the dedicated worker log for these runs:
   'on dedicated worker for f/r/echo:'   0
@@ -85,26 +85,28 @@ With the workaround (`admins:f/r/echo` added), all three steps run on a runner:
 
 ```
 {"dedicated_workers":["admins:flow/f/r/flow","admins:f/r/echo"],"worker_tags":["admins:flow/f/r/flow"]}
-...
-windmill-worker/src/dedicated_worker_ee.rs:214: dedicated worker process started f/r/echo
+windmill-worker/src/dedicated_worker_ee.rs:845: spawned dedicated worker for flow: admins:f/r/flow/a
+windmill-worker/src/dedicated_worker_ee.rs:845: spawned dedicated worker for flow: admins:f/r/flow/b
+windmill-worker/src/dedicated_worker_ee.rs:845: spawned dedicated worker for flow: admins:f/r/flow/c
 windmill-worker/src/dedicated_worker_ee.rs:214: dedicated worker process started f/r/flow/c
+windmill-worker/src/dedicated_worker_ee.rs:214: dedicated worker process started f/r/echo
 windmill-worker/src/dedicated_worker_ee.rs:214: dedicated worker process started f/r/echo
 
 run  step  runnable_path  worker     duration_ms  dispatch
-1    a     f/r/echo       dedicated  9            runner (f/r/echo)
-1    b     f/r/echo       dedicated  10           runner (f/r/echo)
-1    c     f/r/flow/c     dedicated  6            runner (f/r/flow/c)
-2    a     f/r/echo       dedicated  4            runner (f/r/echo)
+1    a     f/r/echo       dedicated  6            runner (f/r/echo)
+1    b     f/r/echo       dedicated  4            runner (f/r/echo)
+1    c     f/r/flow/c     dedicated  13           runner (f/r/flow/c)
+2    a     f/r/echo       dedicated  5            runner (f/r/echo)
 2    b     f/r/echo       dedicated  4            runner (f/r/echo)
-2    c     f/r/flow/c     dedicated  5            runner (f/r/flow/c)
-3    a     f/r/echo       dedicated  3            runner (f/r/echo)
-3    b     f/r/echo       dedicated  4            runner (f/r/echo)
-3    c     f/r/flow/c     dedicated  6            runner (f/r/flow/c)
-4    a     f/r/echo       dedicated  4            runner (f/r/echo)
-4    b     f/r/echo       dedicated  11           runner (f/r/echo)
+2    c     f/r/flow/c     dedicated  3            runner (f/r/flow/c)
+3    a     f/r/echo       dedicated  5            runner (f/r/echo)
+3    b     f/r/echo       dedicated  3            runner (f/r/echo)
+3    c     f/r/flow/c     dedicated  4            runner (f/r/flow/c)
+4    a     f/r/echo       dedicated  3            runner (f/r/echo)
+4    b     f/r/echo       dedicated  6            runner (f/r/echo)
 4    c     f/r/flow/c     dedicated  4            runner (f/r/flow/c)
-5    a     f/r/echo       dedicated  3            runner (f/r/echo)
-5    b     f/r/echo       dedicated  3            runner (f/r/echo)
+5    a     f/r/echo       dedicated  4            runner (f/r/echo)
+5    b     f/r/echo       dedicated  5            runner (f/r/echo)
 5    c     f/r/flow/c     dedicated  3            runner (f/r/flow/c)
 
 Dispatch lines in the dedicated worker log for these runs:
