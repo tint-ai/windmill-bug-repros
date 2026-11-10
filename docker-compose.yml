@@ -1,0 +1,62 @@
+# Windmill EE 1.847.0: server, one default worker, one dedicated worker.
+# Requires WM_LICENSE_KEY in the environment (dedicated workers are an EE feature).
+name: wm-dedicated-error
+
+x-windmill: &windmill
+  image: ghcr.io/windmill-labs/windmill-ee:1.847.0
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+x-env: &env
+  DATABASE_URL: postgres://postgres:postgres@db:5432/windmill?sslmode=disable
+  BASE_URL: http://localhost:${WM_PORT:-48300}
+  LICENSE_KEY: ${WM_LICENSE_KEY:?WM_LICENSE_KEY is required}
+  NO_COLOR: "1"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: windmill
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  server:
+    <<: *windmill
+    ports:
+      - "${WM_PORT:-48300}:8000"
+    environment:
+      <<: *env
+      MODE: server
+      SUPERADMIN_SECRET: superadmin-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/version"]
+      interval: 5s
+      retries: 30
+
+  # Default group: runs dependency jobs and the non-dedicated runs.
+  worker:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: default
+
+  # Joins worker group `dedicated`, configured by repro.sh. Exits on every
+  # config change or deploy of a listed runnable; Docker restarts it.
+  worker-dedicated:
+    <<: *windmill
+    environment:
+      <<: *env
+      MODE: worker
+      WORKER_GROUP: dedicated
+
+volumes:
+  db_data:

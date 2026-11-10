@@ -1,0 +1,26 @@
+{
+  "summary": "one failing script step, failure module echoes the error",
+  "value": {
+    "modules": [
+      {
+        "id": "a",
+        "value": { "type": "script", "path": "STEP_SCRIPT_PATH", "input_transforms": {} }
+      }
+    ],
+    "failure_module": {
+      "id": "failure",
+      "value": {
+        "type": "rawscript",
+        "language": "bun",
+        "content": "export async function main(error: any) {\n  return { keys: Object.keys(error).sort(), step_id: error.step_id ?? null, extra: error.extra ?? null };\n}\n",
+        "input_transforms": { "error": { "type": "javascript", "expr": "error" } }
+      }
+    }
+  },
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}
